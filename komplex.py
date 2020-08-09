@@ -11,7 +11,7 @@ from tensorflow.distributions import Categorical
 def log(z):
     if "ComplexTensor" in z.__class__.__name__:
         r, theta = z.euler()
-        result = ComplexTensor((K.log(r), theta), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((K.log(r), theta), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.log(z)
     return result
@@ -22,7 +22,7 @@ def exp(z):
         a, b = z.real, z.imag
         real = K.exp(a) * K.cos(b)
         imag = K.exp(a) * K.sin(b)
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.exp(z)
     return result
@@ -38,7 +38,7 @@ def sin(z):
         a, b = z.real, z.imag
         real = K.sin(a) * cosh(b)
         imag = K.cos(a) * sinh(b)
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.sin(z)
     return result
@@ -49,7 +49,7 @@ def cos(z):
         a, b = z.real, z.imag
         real = K.cos(a) * cosh(b)
         imag = K.sin(a) * sinh(b)
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.cos(z)
     return result
@@ -61,7 +61,7 @@ def tan(z):
         denominator = K.cos( 2 *a) + cosh( 2 *b)
         real = K.sin( 2 *a) / denominator
         imag = sinh( 2 *b) / denominator
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.tan(z)
     return result
@@ -73,7 +73,7 @@ def tanh(z):
         denominator = cosh( 2 *a) + K.cos( 2 *b)
         real = sinh(2 * a) / denominator
         imag = K.sin(2 * a) / denominator
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.tanh(z)
     return result
@@ -85,7 +85,7 @@ def sigmoid(z):
         denominator = 1 + 2 * K.exp(-a) * K.cos(b) + K.exp(-2 * a)
         real = 1 + K.exp(-a) * K.cos(b) / denominator
         imag = K.exp(-a) * K.sin(b) / denominator
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.sigmoid(z)
     return result
@@ -113,7 +113,7 @@ def CReLU(z):
         a, b = z.real, z.imag
         real = K.relu(a)
         imag = K.relu(b)
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.relu(z)
     return result
@@ -130,7 +130,7 @@ def zReLU(z):
         mask = ((0 < z.angle()) * (z.angle() < np.pi/2)).float()
         real = a * mask
         imag = b * mask
-        result = ComplexTensor((real ,imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real ,imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.relu(z)
     return result
@@ -147,19 +147,19 @@ def modReLU(z, bias):
         mask = ((z_mag + bias) >= 0).float() * (1 + bias / z_mag)
         real = mask * a
         imag = mask * b
-        result = ComplexTensor((real, imag), complex=True, requires_grad=z.requires_grad)
+        result = ComplexTensor((real, imag), complex=True, stop_gradient=z.stop_gradient)
     else:
         result = K.relu(z)
     return result
 
 
 class ComplexTensor:
-    def __init__(self, x, complex=True, requires_grad=True):
-        self.requires_grad = requires_grad
+    def __init__(self, x, complex=True, stop_gradient=True):
+        self.stop_gradient = stop_gradient
         if 'tuple' in x.__class__.__name__:
             if len(x) == 2:
                 if 'ndarray' in x[0].__class__.__name__:
-                    ComplexTensor(x[0] + 1j*x[1], requires_grad=self.requires_grad)
+                    ComplexTensor(x[0] + 1j*x[1], stop_gradient=self.stop_gradient)
                 elif 'Tensor' in x[0].__class__.__name__:
                     a = x[0]
                     b = x[1]
@@ -183,21 +183,21 @@ class ComplexTensor:
                 a = x
                 b = K.zeros_like(x)
         elif 'list' in x.__class__.__name__:
-            self.z = ComplexTensor(np.array(x), requires_grad=self.requires_grad).z
+            self.z = ComplexTensor(np.array(x), stop_gradient=self.stop_gradient).z
         else:
             raise TypeError(x.__class__.__name__ + " cannot be converted to a ComplexTensor.")
         if 'z' not in self.__dict__:
             dim = a.dim()
             self.z = K.cat((a.unsqueeze(dim) ,b.unsqueeze(dim)), dim=dim)
-        if self.requires_grad:
-            self.z = self.z.requires_grad_()
+        if self.stop_gradient:
+            self.z = self.z.stop_gradient_()
 
-    def requires_grad_(self):
-        self.z = self.z.requires_grad_()
-        self.requires_grad = True
+    def stop_gradient_(self):
+        self.z = self.z.stop_gradient_()
+        self.stop_gradient = True
 
-    def requires_grad_check(self, other):
-        return other.requires_grad or self.requires_grad
+    def stop_gradient_check(self, other):
+        return other.stop_gradient or self.stop_gradient
 
     @property
     def real(self):
@@ -259,14 +259,14 @@ class ComplexTensor:
         if "ComplexTensor" in other.__class__.__name__:
             result = self.z + other.z
         elif "Tensor" in other.__class__.__name__:
-            result = self.z + ComplexTensor(other, requires_grad=self.requires_grad_check(other)).z
+            result = self.z + ComplexTensor(other, stop_gradient=self.stop_gradient_check(other)).z
         else:
             raise TypeError("ComplexTensor and " + str(other.__class__.__name__) + " cannot be added.")
         return result
 
     def __radd__(self, other):
         if "Tensor" in other.__class__.__name__:
-            result = self.z + ComplexTensor(other, requires_grad=self.requires_grad_check(other)).z
+            result = self.z + ComplexTensor(other, stop_gradient=self.stop_gradient_check(other)).z
         else:
             raise TypeError(str(other.__class__.__name__) + "and ComplexTensor cannot be added.")
         return result
@@ -275,7 +275,7 @@ class ComplexTensor:
         if "ComplexTensor" in other.__class__.__name__:
             result = self.z - other.z
         elif "Tensor" in other.__class__.__name__:
-            result = self.z - ComplexTensor(other, requires_grad=self.requires_grad_check(other)).z
+            result = self.z - ComplexTensor(other, stop_gradient=self.stop_gradient_check(other)).z
         else:
             raise TypeError("Cannot subtract " + str(other.__class__.__name__) + " from a ComplexTensor.")
         return result
@@ -284,7 +284,7 @@ class ComplexTensor:
         if "ComplexTensor" in other.__class__.__name__:
             result = other.z - self.z
         elif "Tensor" in other.__class__.__name__:
-            result = ComplexTensor(other, requires_grad=self.requires_grad_check(other)).z - self.z
+            result = ComplexTensor(other, stop_gradient=self.stop_gradient_check(other)).z - self.z
         else:
             raise TypeError("Cannot subtract a ComplexTensor from " + str(other.__class__.__name__) + ".")
         return result
@@ -298,16 +298,16 @@ class ComplexTensor:
             denominator = abs(other)
             real = (a * c + b * d) / denominator
             imag = (b * c - a * d) / denominator
-            result = ComplexTensor((real, imag), complex=True, requires_grad=self.requires_grad_check(other))
+            result = ComplexTensor((real, imag), complex=True, stop_gradient=self.stop_gradient_check(other))
         elif "Tensor" in other.__class__.__name__:
-            result = self / ComplexTensor(other, requires_grad=self.requires_grad_check(other))
+            result = self / ComplexTensor(other, stop_gradient=self.stop_gradient_check(other))
         else:
             raise TypeError("ComplexTensor cannot divide " + str(other.__class__.__name__) + ".")
         return result
 
     def __rtruediv__(self, other):
         if "Tensor" in other.__class__.__name__:
-            result = ComplexTensor(other, requires_grad=self.requires_grad_check(other)) / self
+            result = ComplexTensor(other, stop_gradient=self.stop_gradient_check(other)) / self
         else:
             raise TypeError(str(other.__class__.__name__) + " cannot divide a ComplexTensor.")
         return result
@@ -320,9 +320,9 @@ class ComplexTensor:
             d = other.imag
             real = a * c - b * d
             imag = a * d + b * c
-            result = ComplexTensor((real, imag), requires_grad=self.requires_grad_check(other))
+            result = ComplexTensor((real, imag), stop_gradient=self.stop_gradient_check(other))
         elif "Tensor" in other.__class__.__name__:
-            other = ComplexTensor((other, K.zeros_like(other)), requires_grad=self.requires_grad_check(other))
+            other = ComplexTensor((other, K.zeros_like(other)), stop_gradient=self.stop_gradient_check(other))
             result = self.__matmul__(other)
         else:
             raise TypeError("ComplexTensor cannot multiply " + str(other.__class__.__name__))
@@ -336,9 +336,9 @@ class ComplexTensor:
             d = other.imag
             real = a @ c - b @ d
             imag = a @ d + b @ c
-            result = ComplexTensor((real, imag), requires_grad=self.requires_grad_check(other))
+            result = ComplexTensor((real, imag), stop_gradient=self.stop_gradient_check(other))
         elif "Tensor" in other.__class__.__name__:
-            other = ComplexTensor((other, K.zeros_like(other)), requires_grad=self.requires_grad_check(other))
+            other = ComplexTensor((other, K.zeros_like(other)), stop_gradient=self.stop_gradient_check(other))
             result = self.__matmul__(other)
         else:
             raise TypeError("ComplexTensor cannot matrix - multiply " + str(other.__class__.__name__))
@@ -346,7 +346,7 @@ class ComplexTensor:
 
     def __rmul__(self, other):
         if "Tensor" in other.__class__.__name__:
-            other = ComplexTensor((other, K.zeros_like(other)), requires_grad=self.requires_grad_check(other))
+            other = ComplexTensor((other, K.zeros_like(other)), stop_gradient=self.stop_gradient_check(other))
             result = self.__mul__(other)
         else:
             raise TypeError('Cannot multiply ' + str(other.__class__.__name__) + " with a ComplexTensor.")
@@ -354,7 +354,7 @@ class ComplexTensor:
 
     def __rmatmul__(self, other):
         if "Tensor" in other.__class__.__name__:
-            other = ComplexTensor((other, K.zeros_like(other)), requires_grad=self.requires_grad_check(other))
+            other = ComplexTensor((other, K.zeros_like(other)), stop_gradient=self.stop_gradient_check(other))
             result = self.__matmul__(other)
         else:
             raise TypeError('Cannot multiply ' + str(other.__class__.__name__) + " with a ComplexTensor.")
