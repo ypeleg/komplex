@@ -7,7 +7,7 @@
 ### All credits whatsoever goes to him! 
 
 ---
-#### I just translated his work to keras & tensorflow.     
+#### I just translated his work to be using keras&tf backend.     
 #### You can think of me as some sort of a pretty bad NLP translation algorithm. Nothing more! 
 #### Translated from: https://github.com/omrijsharon/torchlex.
 ---- 
