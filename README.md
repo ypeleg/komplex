@@ -1,4 +1,4 @@
-# komplex
+# Komplex
 *Keras* extension for Complex tensors and complex functions.
 
 ---- 
