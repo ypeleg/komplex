@@ -1,5 +1,5 @@
 # komplex
-Keras extension for Complex tensors and complex functions.
+*Keras* extension for Complex tensors and complex functions.
 
 ---- 
 ### Keras translation of 'torchlex': https://github.com/omrijsharon/torchlex.
