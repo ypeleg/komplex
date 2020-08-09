@@ -2,7 +2,7 @@
 *Keras* extension for Complex tensors and complex functions.
 
 ---- 
-### Keras translation of 'torchlex': https://github.com/omrijsharon/torchlex.
+### Keras translation of https://github.com/omrijsharon/torchlex.
 ### An amazing repository of @omrijsharon (https://github.com/omrijsharon).
 ### All credits whatsoever goes to him! 
 
